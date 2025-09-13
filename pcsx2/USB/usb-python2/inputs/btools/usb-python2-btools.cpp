@@ -144,7 +144,7 @@ namespace usb_python2
 
 			if (keybind == "DdrP1Start")
 				return ddrioState & (1 << DDR_P1_START);
-			if (keybind == "DdrP1Select")
+			if (keybind == "DdrP1SelectL")
 				return ddrioState & (1 << DDR_P1_MENU_LEFT);
 			if (keybind == "DdrP1SelectR")
 				return ddrioState & (1 << DDR_P1_MENU_RIGHT);
@@ -160,7 +160,7 @@ namespace usb_python2
 
 			if (keybind == "DdrP2Start")
 				return ddrioState & (1 << DDR_P2_START);
-			if (keybind == "DdrP2Select")
+			if (keybind == "DdrP2SelectL")
 				return ddrioState & (1 << DDR_P2_MENU_LEFT);
 			if (keybind == "DdrP2SelectR")
 				return ddrioState & (1 << DDR_P2_MENU_RIGHT);
