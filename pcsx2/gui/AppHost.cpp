@@ -24,7 +24,7 @@
 #include "HostSettings.h"
 #include "HostDisplay.h"
 #include "GS/GS.h"
-#include "Mister.h"
+#include "Mister/Mister.h"
 
 #include "common/Assertions.h"
 #include "Frontend/ImGuiManager.h"

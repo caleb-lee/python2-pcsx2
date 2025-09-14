@@ -535,7 +535,7 @@
     <ClCompile Include="GS\Renderers\HW\GSRendererHWMultiISA.cpp" />
     <ClCompile Include="GS\Renderers\Null\GSRendererNull.cpp" />
     <ClCompile Include="GS\Renderers\SW\GSRendererSW.cpp" />
-    <ClCompile Include="Mister.cpp" />
+    <ClCompile Include="Mister\Mister.cpp" />
     <ClCompile Include="Mister\lz4\lz4.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
@@ -936,7 +936,7 @@
     <ClInclude Include="GS\Renderers\HW\GSRendererHW.h" />
     <ClInclude Include="GS\Renderers\Null\GSRendererNull.h" />
     <ClInclude Include="GS\Renderers\SW\GSRendererSW.h" />
-    <ClInclude Include="Mister.h" />
+    <ClInclude Include="Mister\Mister.h" />
     <ClInclude Include="Mister\lz4\lz4.h" />
     <ClInclude Include="Mister\lz4\lz4hc.h" />
     <ClInclude Include="GS\Renderers\SW\GSScanlineEnvironment.h" />

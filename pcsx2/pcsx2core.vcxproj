@@ -345,7 +345,7 @@
     <ClCompile Include="VMManager.cpp" />
     <ClCompile Include="windows\Optimus.cpp" />
     <ClCompile Include="Pcsx2Config.cpp" />
-    <ClCompile Include="Mister.cpp" />
+    <ClCompile Include="Mister\Mister.cpp" />
     <ClCompile Include="windows\FlatFileReaderWindows.cpp" />
     <ClCompile Include="Darwin\DarwinFlatFileReader.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
@@ -710,7 +710,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Config.h" />
-    <ClInclude Include="Mister.h" />
+    <ClInclude Include="Mister\Mister.h" />
     <ClInclude Include="Dump.h" />
     <ClInclude Include="SaveState.h" />
     <ClInclude Include="SingleRegisterTypes.h" />

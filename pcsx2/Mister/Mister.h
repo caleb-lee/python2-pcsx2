@@ -24,8 +24,8 @@
 #include <unistd.h>
 #endif
 
-#include <lz4.h>
-#include <lz4hc.h>
+#include "lz4/lz4.h"
+#include "lz4/lz4hc.h"
 
 #define CMD_CLOSE 1
 #define CMD_INIT 2

@@ -160,7 +160,7 @@ set(pcsx2Sources
 	Patch_Memory.cpp
 	Pcsx2Config.cpp
 	PerformanceMetrics.cpp
-	Mister.cpp
+	Mister/Mister.cpp
 	PrecompiledHeader.cpp
 	R3000A.cpp
 	R3000AInterpreter.cpp
@@ -203,7 +203,7 @@ set(pcsx2Headers
 	Cache.h
 	Common.h
 	Config.h
-	Mister.h
+	Mister/Mister.h
 	COP0.h
 	Counters.h
 	Dmac.h

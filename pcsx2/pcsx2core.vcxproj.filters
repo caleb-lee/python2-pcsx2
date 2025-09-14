@@ -377,7 +377,7 @@
     <ClCompile Include="Pcsx2Config.cpp">
       <Filter>System</Filter>
     </ClCompile>
-    <ClCompile Include="Mister.cpp">
+    <ClCompile Include="Mister\Mister.cpp">
       <Filter>System</Filter>
     </ClCompile>
     <ClCompile Include="SaveState.cpp">
@@ -2061,7 +2061,7 @@
     <ClInclude Include="GS\Renderers\Null\GSTextureNull.h">
       <Filter>System\Ps2\GS\Renderers\Null</Filter>
     </ClInclude>
-    <ClInclude Include="Mister.h">
+    <ClInclude Include="Mister\Mister.h">
       <Filter>System\Ps2\Mister</Filter>
     </ClInclude>
     <ClInclude Include="Mister\lz4\lz4.h">
