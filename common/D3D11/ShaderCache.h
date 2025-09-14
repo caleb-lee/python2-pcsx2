@@ -20,6 +20,7 @@
 #include "common/D3D11/ShaderCompiler.h"
 #include <cstdio>
 #include <d3d11.h>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
