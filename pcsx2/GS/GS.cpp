@@ -1196,6 +1196,7 @@ void GSApp::Init()
 	m_gs_renderers.push_back(GSSetting(static_cast<u32>(GSRendererType::VK), "Vulkan", ""));
 #endif
 	m_gs_renderers.push_back(GSSetting(static_cast<u32>(GSRendererType::SW), "Software", ""));
+	m_gs_renderers.push_back(GSSetting(static_cast<u32>(GSRendererType::Mister), "Groovy_MiSTer", ""));
 
 	// The null renderer goes last, it has use for benchmarking purposes in a release build
 	m_gs_renderers.push_back(GSSetting(static_cast<u32>(GSRendererType::Null), "Null", ""));
