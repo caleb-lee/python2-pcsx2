@@ -16,8 +16,15 @@
 #include "PrecompiledHeader.h"
 #include "GSRendererMister.h"
 #include "Host.h"
-#include "GS/GSDevice.h"
+#include "../Common/GSDevice.h"
 #include <cstring>
+
+#include "lz4/lz4.h"
+#include "lz4/lz4hc.h"
+
+#ifdef _WIN32
+typedef int ssize_t;
+#endif
 
 GSRendererMister::GSRendererMister()
 	: m_socket(INVALID_SOCKET)
@@ -33,7 +40,7 @@ GSRendererMister::GSRendererMister()
 	}
 	else
 	{
-		Console.WriteLn("GSRendererMister: Successfully initialized for low-latency operation");
+		Console.WriteLn("GSRendererMister: Successfully initialized");
 	}
 }
 
@@ -79,9 +86,6 @@ bool GSRendererMister::InitializeNetwork()
 	BOOL nodelay = TRUE;
 	setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay, sizeof(nodelay));
 	
-	// Set high priority for socket operations
-	int priority = 6;
-	setsockopt(m_socket, SOL_SOCKET, SO_PRIORITY, (char*)&priority, sizeof(priority));
 #else
 	// Set socket to non-blocking
 	int flags = fcntl(m_socket, F_GETFL, 0);

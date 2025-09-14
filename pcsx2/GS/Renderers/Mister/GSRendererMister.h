@@ -34,8 +34,6 @@ typedef int socket_t;
 
 #include <chrono>
 #include <vector>
-#include "lz4/lz4.h"
-#include "lz4/lz4hc.h"
 
 // Groovy_Mister protocol definitions
 #define CMD_CLOSE 1

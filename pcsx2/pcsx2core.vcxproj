@@ -314,8 +314,12 @@
     <ClCompile Include="GS\Renderers\Null\GSRendererNull.cpp" />
     <ClCompile Include="GS\Renderers\SW\GSRendererSW.cpp" />
     <ClCompile Include="GS\Renderers\Mister\GSRendererMister.cpp" />
-    <ClCompile Include="GS\Renderers\Mister\lz4\lz4.c" />
-    <ClCompile Include="GS\Renderers\Mister\lz4\lz4hc.c" />
+    <ClCompile Include="GS\Renderers\Mister\lz4\lz4.c">
+      <CompileAs>CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="GS\Renderers\Mister\lz4\lz4hc.c">
+      <CompileAs>CompileAsCpp</CompileAs>
+    </ClCompile>
     <ClCompile Include="GS\Window\GSSetting.cpp" />
     <ClCompile Include="GS\Renderers\SW\GSSetupPrimCodeGenerator.cpp" />
     <ClCompile Include="GS\Renderers\SW\GSSetupPrimCodeGenerator.all.cpp" />
