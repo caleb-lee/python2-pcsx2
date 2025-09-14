@@ -66,8 +66,6 @@ static constexpr RendererInfo s_renderer_info[] = {
 #endif
 	QT_TRANSLATE_NOOP("GraphicsSettingsWidget", "Software"),
 	GSRendererType::SW,
-	QT_TRANSLATE_NOOP("GraphicsSettingsWidget", "Groovy_MiSTer"),
-	GSRendererType::Mister,
 	QT_TRANSLATE_NOOP("GraphicsSettingsWidget", "Null"),
 	GSRendererType::Null,
 };
@@ -734,7 +732,7 @@ void GraphicsSettingsWidget::updateRendererDependentOptions()
 #endif
 
 	const bool is_hardware = (type == GSRendererType::DX11 || type == GSRendererType::DX12 || type == GSRendererType::OGL || type == GSRendererType::VK || type == GSRendererType::Metal);
-	const bool is_software = (type == GSRendererType::SW || type == GSRendererType::Mister);
+	const bool is_software = (type == GSRendererType::SW);
 	const bool hw_fixes = (is_hardware && m_ui.enableHWFixes->checkState() == Qt::Checked);
 	const int prev_tab = m_ui.tabs->currentIndex();
 
@@ -796,7 +794,6 @@ void GraphicsSettingsWidget::updateRendererDependentOptions()
 
 		case GSRendererType::OGL:
 		case GSRendererType::SW:
-		case GSRendererType::Mister:
 		case GSRendererType::Null:
 		case GSRendererType::Auto:
 		default:

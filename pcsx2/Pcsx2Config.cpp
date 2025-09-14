@@ -290,7 +290,6 @@ const char* Pcsx2Config::GSOptions::GetRendererName(GSRendererType type)
 		case GSRendererType::VK:    return "Vulkan";
 		case GSRendererType::SW:    return "Software";
 		case GSRendererType::Null:  return "Null";
-		case GSRendererType::Mister: return "Mister";
 		default:                    return "";
 	}
 }
@@ -323,6 +322,10 @@ Pcsx2Config::GSOptions::GSOptions()
 	OsdShowSettings = false;
 	OsdShowInputs = false;
 	OsdShowFrameTimes = false;
+
+	// MiSTer defaults
+	MisterEnable = false;
+	MisterHardcodedVSync = false;
 
 	HWDownloadMode = GSHardwareDownloadMode::Enabled;
 	HWSpinGPUForReadbacks = false;
@@ -548,6 +551,12 @@ void Pcsx2Config::GSOptions::ReloadIniSettings()
 	GSSettingBool(OsdShowSettings);
 	GSSettingBool(OsdShowInputs);
 	GSSettingBool(OsdShowFrameTimes);
+
+	// MiSTer settings
+	GSSettingBool(MisterEnable);
+	GSSettingBool(MisterHardcodedVSync);
+	GSSettingInt(MisterVSync);
+	GSSettingString(MisterIP);
 
 	GSSettingBool(HWSpinGPUForReadbacks);
 	GSSettingBool(HWSpinCPUForReadbacks);

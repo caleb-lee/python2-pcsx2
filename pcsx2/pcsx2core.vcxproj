@@ -313,11 +313,10 @@
     <ClCompile Include="GS\Renderers\HW\GSRendererHWMultiISA.cpp" />
     <ClCompile Include="GS\Renderers\Null\GSRendererNull.cpp" />
     <ClCompile Include="GS\Renderers\SW\GSRendererSW.cpp" />
-    <ClCompile Include="GS\Renderers\Mister\GSRendererMister.cpp" />
-    <ClCompile Include="GS\Renderers\Mister\lz4\lz4.c">
+    <ClCompile Include="Mister\lz4\lz4.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
-    <ClCompile Include="GS\Renderers\Mister\lz4\lz4hc.c">
+    <ClCompile Include="Mister\lz4\lz4hc.c">
       <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <ClCompile Include="GS\Window\GSSetting.cpp" />
@@ -346,6 +345,7 @@
     <ClCompile Include="VMManager.cpp" />
     <ClCompile Include="windows\Optimus.cpp" />
     <ClCompile Include="Pcsx2Config.cpp" />
+    <ClCompile Include="Mister.cpp" />
     <ClCompile Include="windows\FlatFileReaderWindows.cpp" />
     <ClCompile Include="Darwin\DarwinFlatFileReader.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
@@ -710,6 +710,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Config.h" />
+    <ClInclude Include="Mister.h" />
     <ClInclude Include="Dump.h" />
     <ClInclude Include="SaveState.h" />
     <ClInclude Include="SingleRegisterTypes.h" />

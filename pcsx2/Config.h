@@ -128,7 +128,6 @@ enum class GSRendererType : s8
 	VK = 14,
 	Metal = 17,
 	DX12 = 15,
-	Mister = 18,
 };
 
 enum class GSInterlaceMode : u8
@@ -525,7 +524,9 @@ struct Pcsx2Config
 					OsdShowIndicators : 1,
 					OsdShowSettings : 1,
 					OsdShowInputs : 1,
-					OsdShowFrameTimes : 1;
+					OsdShowFrameTimes : 1,
+					MisterEnable : 1,
+					MisterHardcodedVSync : 1;
 
 				bool
 					HWSpinGPUForReadbacks : 1,
@@ -627,6 +628,10 @@ struct Pcsx2Config
 
 		GSScreenshotSize ScreenshotSize{GSScreenshotSize::WindowResolution};
 		GSScreenshotFormat ScreenshotFormat{GSScreenshotFormat::PNG};
+
+		// MiSTer options
+		int MisterVSync{120};
+		std::string MisterIP{"192.168.5.2"};
 		int ScreenshotQuality{50};
 
 		std::string Adapter;

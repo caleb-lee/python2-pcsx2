@@ -28,7 +28,6 @@
 #include "GSUtil.h"
 #include "GSExtra.h"
 #include "Renderers/Null/GSRendererNull.h"
-#include "Renderers/Mister/GSRendererMister.h"
 #include "Renderers/Null/GSDeviceNull.h"
 #include "Renderers/HW/GSRendererHW.h"
 #include "Renderers/HW/GSTextureReplacements.h"
@@ -251,10 +250,6 @@ static bool DoGSOpen(GSRendererType renderer, u8* basemem)
 		if (renderer == GSRendererType::Null)
 		{
 			g_gs_renderer = std::make_unique<GSRendererNull>();
-		}
-		else if (renderer == GSRendererType::Mister)
-		{
-			g_gs_renderer = std::make_unique<GSRendererMister>();
 		}
 		else if (renderer != GSRendererType::SW)
 		{
@@ -1196,7 +1191,6 @@ void GSApp::Init()
 	m_gs_renderers.push_back(GSSetting(static_cast<u32>(GSRendererType::VK), "Vulkan", ""));
 #endif
 	m_gs_renderers.push_back(GSSetting(static_cast<u32>(GSRendererType::SW), "Software", ""));
-	m_gs_renderers.push_back(GSSetting(static_cast<u32>(GSRendererType::Mister), "Groovy_MiSTer", ""));
 
 	// The null renderer goes last, it has use for benchmarking purposes in a release build
 	m_gs_renderers.push_back(GSSetting(static_cast<u32>(GSRendererType::Null), "Null", ""));
