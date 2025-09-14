@@ -112,7 +112,6 @@ public:
 	GSRendererMister();
 	~GSRendererMister();
 
-	bool Initialize() override;
 	void Destroy() override;
 	void VSync(u32 field, bool registers_written) override;
 

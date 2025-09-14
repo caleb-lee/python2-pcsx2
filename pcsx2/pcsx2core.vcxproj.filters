@@ -196,6 +196,12 @@
     <Filter Include="System\Ps2\GS\Renderers\Software">
       <UniqueIdentifier>{8a0a142d-a4e0-4e8d-afbf-955fe1697eca}</UniqueIdentifier>
     </Filter>
+    <Filter Include="System\Ps2\GS\Renderers\Mister">
+      <UniqueIdentifier>{12345678-1234-1234-1234-123456789abc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="System\Ps2\GS\Renderers\Mister\lz4">
+      <UniqueIdentifier>{12345678-1234-1234-1234-123456789def}</UniqueIdentifier>
+    </Filter>
     <Filter Include="System\Ps2\GS\Renderers\OpenGL">
       <UniqueIdentifier>{c140280a-87c6-4433-b877-f0bf8cca9345}</UniqueIdentifier>
     </Filter>
@@ -1111,6 +1117,15 @@
     </ClCompile>
     <ClCompile Include="GS\Renderers\Null\GSTextureNull.cpp">
       <Filter>System\Ps2\GS\Renderers\Null</Filter>
+    </ClCompile>
+    <ClCompile Include="GS\Renderers\Mister\GSRendererMister.cpp">
+      <Filter>System\Ps2\GS\Renderers\Mister</Filter>
+    </ClCompile>
+    <ClCompile Include="GS\Renderers\Mister\lz4\lz4.c">
+      <Filter>System\Ps2\GS\Renderers\Mister\lz4</Filter>
+    </ClCompile>
+    <ClCompile Include="GS\Renderers\Mister\lz4\lz4hc.c">
+      <Filter>System\Ps2\GS\Renderers\Mister\lz4</Filter>
     </ClCompile>
     <ClCompile Include="GS\Renderers\HW\GSRendererHW.cpp">
       <Filter>System\Ps2\GS\Renderers\Hardware</Filter>
@@ -2045,6 +2060,15 @@
     </ClInclude>
     <ClInclude Include="GS\Renderers\Null\GSTextureNull.h">
       <Filter>System\Ps2\GS\Renderers\Null</Filter>
+    </ClInclude>
+    <ClInclude Include="GS\Renderers\Mister\GSRendererMister.h">
+      <Filter>System\Ps2\GS\Renderers\Mister</Filter>
+    </ClInclude>
+    <ClInclude Include="GS\Renderers\Mister\lz4\lz4.h">
+      <Filter>System\Ps2\GS\Renderers\Mister\lz4</Filter>
+    </ClInclude>
+    <ClInclude Include="GS\Renderers\Mister\lz4\lz4hc.h">
+      <Filter>System\Ps2\GS\Renderers\Mister\lz4</Filter>
     </ClInclude>
     <ClInclude Include="GS\Renderers\HW\GSRendererHW.h">
       <Filter>System\Ps2\GS\Renderers\Hardware</Filter>

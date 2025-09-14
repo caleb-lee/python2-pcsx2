@@ -27,26 +27,19 @@ GSRendererMister::GSRendererMister()
 	, m_current_width(0)
 	, m_current_height(0)
 {
+	if (!InitializeNetwork())
+	{
+		Console.Error("GSRendererMister: Failed to initialize network");
+	}
+	else
+	{
+		Console.WriteLn("GSRendererMister: Successfully initialized for low-latency operation");
+	}
 }
 
 GSRendererMister::~GSRendererMister()
 {
 	Destroy();
-}
-
-bool GSRendererMister::Initialize()
-{
-	if (!GSRenderer::Initialize())
-		return false;
-		
-	if (!InitializeNetwork())
-	{
-		Console.Error("GSRendererMister: Failed to initialize network");
-		return false;
-	}
-	
-	Console.WriteLn("GSRendererMister: Successfully initialized for low-latency operation");
-	return true;
 }
 
 void GSRendererMister::Destroy()
