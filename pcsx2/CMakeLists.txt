@@ -791,6 +791,9 @@ set(pcsx2GSSources
 	GS/Renderers/Null/GSDeviceNull.cpp
 	GS/Renderers/Null/GSRendererNull.cpp
 	GS/Renderers/Null/GSTextureNull.cpp
+	GS/Renderers/Mister/GSRendererMister.cpp
+	GS/Renderers/Mister/lz4/lz4.c
+	GS/Renderers/Mister/lz4/lz4hc.c
 	GS/Renderers/HW/GSHwHack.cpp
 	GS/Renderers/HW/GSRendererHW.cpp
 	GS/Renderers/HW/GSTextureCache.cpp
@@ -848,6 +851,9 @@ set(pcsx2GSHeaders
 	GS/Renderers/Null/GSDeviceNull.h
 	GS/Renderers/Null/GSRendererNull.h
 	GS/Renderers/Null/GSTextureNull.h
+	GS/Renderers/Mister/GSRendererMister.h
+	GS/Renderers/Mister/lz4/lz4.h
+	GS/Renderers/Mister/lz4/lz4hc.h
 	GS/Renderers/HW/GSRendererHW.h
 	GS/Renderers/HW/GSTextureCache.h
 	GS/Renderers/HW/GSTextureReplacements.h

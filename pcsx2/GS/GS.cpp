@@ -28,6 +28,7 @@
 #include "GSUtil.h"
 #include "GSExtra.h"
 #include "Renderers/Null/GSRendererNull.h"
+#include "Renderers/Mister/GSRendererMister.h"
 #include "Renderers/Null/GSDeviceNull.h"
 #include "Renderers/HW/GSRendererHW.h"
 #include "Renderers/HW/GSTextureReplacements.h"
@@ -250,6 +251,10 @@ static bool DoGSOpen(GSRendererType renderer, u8* basemem)
 		if (renderer == GSRendererType::Null)
 		{
 			g_gs_renderer = std::make_unique<GSRendererNull>();
+		}
+		else if (renderer == GSRendererType::Mister)
+		{
+			g_gs_renderer = std::make_unique<GSRendererMister>();
 		}
 		else if (renderer != GSRendererType::SW)
 		{
