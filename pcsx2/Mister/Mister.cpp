@@ -1,6 +1,8 @@
 #include "PrecompiledHeader.h"
 #include "Mister.h"
 #include "Host.h"
+#include "Config.h"
+#include "GS/Renderers/Common/GSDevice.h"
 
 MiSTer::MiSTer()
 {
@@ -23,83 +25,91 @@ void MiSTer::CmdClose(void)
 #endif
 }
 
-void MiSTer::CmdInit(const char* mister_host, short mister_port, bool lz4_frames, uint32_t sound_rate, uint8_t sound_chan)
+void MiSTer::CmdInit(void)
 {
-   char buffer[4];
+	char buffer[4];
 
 #ifdef _WIN32
-   WSADATA wsd;
-   uint16_t rc;
+	WSADATA wsd;
+	int rc;
 
-   Console.WriteLn("MiSTer: Initialising Winsock...");
-   rc = WSAStartup(MAKEWORD(2, 2), &wsd);
-   if (rc != 0)
-   {
-	Console.Error("MiSTer: Unable to load Winsock: %d", rc);
-   }
+	Console.WriteLn("MiSTer: Initialising Winsock...");
+	rc = WSAStartup(MAKEWORD(2, 2), &wsd);
+	if (rc != 0)
+	{
+		Console.Error("MiSTer: Unable to load Winsock: %d", rc);
+		return;
+	}
 
-   Console.WriteLn("MiSTer: Initialising socket...");
-   sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-   if (sockfd < 0)
-   {
-    	Console.Error("MiSTer: socket error");
-   }
+	Console.WriteLn("MiSTer: Initialising socket...");
+	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sockfd == INVALID_SOCKET)
+	{
+		Console.Error("MiSTer: socket error: %d", WSAGetLastError());
+		return;
+	}
 
-   memset(&ServerAddr, 0, sizeof(ServerAddr));
-   ServerAddr.sin_family = AF_INET;
-   ServerAddr.sin_port = htons(mister_port);
-   ServerAddr.sin_addr.s_addr = inet_addr(mister_host);
+	memset(&ServerAddr, 0, sizeof(ServerAddr));
+	ServerAddr.sin_family = AF_INET;
+	ServerAddr.sin_port = htons(32100);
+	ServerAddr.sin_addr.s_addr = inet_addr(EmuConfig.GS.MisterIP.c_str());
 
-   Console.WriteLn("MiSTer: Setting socket async...");
-   u_long iMode=1;
-   rc = ioctlsocket(sockfd, FIONBIO, &iMode);
-   if (rc < 0)
-   {
-   	Console.Error("MiSTer: set nonblock fail");
-   }
+	Console.WriteLn("MiSTer: Setting socket async...");
+	u_long iMode = 1;
+	rc = ioctlsocket(sockfd, FIONBIO, &iMode);
+	if (rc == SOCKET_ERROR)
+	{
+		Console.Error("MiSTer: set nonblock fail: %d", WSAGetLastError());
+		return;
+	}
 
-   Console.WriteLn("MiSTer: Setting send buffer to 2097152 bytes...");
-   int optVal = 2097152;
-   int optLen = sizeof(int);
-   rc = setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen);
-   if (rc < 0)
-   {
-   	Console.Error("MiSTer: set so_sndbuff fail");
-   }
+	Console.WriteLn("MiSTer: Setting send buffer to 2097152 bytes...");
+	int optVal = 2097152;
+	int optLen = sizeof(int);
+	rc = setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen);
+	if (rc == SOCKET_ERROR)
+	{
+		Console.Error("MiSTer: set so_sndbuff fail: %d", WSAGetLastError());
+		return;
+	}
 
 #else
 
-  Console.WriteLn("MiSTer: Initialising socket...");
-  sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  if (sockfd < 0)
-  {
-    	Console.Error("MiSTer: socket error");
-  }
+	Console.WriteLn("MiSTer: Initialising socket...");
+	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sockfd < 0)
+	{
+		Console.Error("MiSTer: socket error");
+		return;
+	}
 
-  memset(&ServerAddr, 0, sizeof(ServerAddr));
-  ServerAddr.sin_family = AF_INET;
-  ServerAddr.sin_port = htons(mister_port);
-  ServerAddr.sin_addr.s_addr = inet_addr(mister_host);
+	memset(&ServerAddr, 0, sizeof(ServerAddr));
+	ServerAddr.sin_family = AF_INET;
+	ServerAddr.sin_port = htons(32100);
+	ServerAddr.sin_addr.s_addr = inet_addr(EmuConfig.GS.MisterIP.c_str());
 
-  Console.WriteLn("MiSTer: Setting socket async...");
-  int flags;
-  flags = fcntl(sockfd, F_GETFD, 0);
-  if (flags < 0)
-  {
-  	Console.Error("MiSTer: get flag error");
-  }
-  flags |= O_NONBLOCK;
-  if (fcntl(sockfd, F_SETFL, flags) < 0)
-  {
-  	Console.Error("MiSTer: set nonblock fail");
-  }
+	Console.WriteLn("MiSTer: Setting socket async...");
+	int flags;
+	flags = fcntl(sockfd, F_GETFL, 0);
+	if (flags < 0)
+	{
+		Console.Error("MiSTer: get flag error");
+		return;
+	}
+	flags |= O_NONBLOCK;
+	if (fcntl(sockfd, F_SETFL, flags) < 0)
+	{
+		Console.Error("MiSTer: set nonblock fail");
+		return;
+	}
 
-  Console.WriteLn("MiSTer: Setting send buffer to 2097152 bytes...");
-  int size = 2 * 1024 * 1024;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (void*)&size, sizeof(size)) < 0)
-  {
-  	Console.Error("MiSTer: Error so_sndbuff");
-  }
+	Console.WriteLn("MiSTer: Setting send buffer to 2097152 bytes...");
+	int size = 2 * 1024 * 1024;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (void*)&size, sizeof(size)) < 0)
+	{
+		Console.Error("MiSTer: Error so_sndbuff");
+		return;
+	}
 
 #endif
 
@@ -259,37 +269,84 @@ void MiSTer::CmdSwitchres480p()
     Send(&buffer[0], 26);
 }
 
-void MiSTer::CmdBlit(char *bufferFrame, uint16_t vsync)
+void MiSTer::CmdBlitTexture(class GSTexture* texture, const class GSVector4& src_uv, const class GSVector4& draw_rect)
 {
-   char buffer[9];
+	if (!texture || !g_gs_device)
+		return;
 
-   frame++;
+	// Download texture data from GPU
+	GSTexture::GSMap map;
+	GSVector4i rect(0, 0, texture->GetWidth(), texture->GetHeight());
 
-   uint8_t blockLinesFactor = (width > 384) ? 5 : 4;
-   uint32_t blockSize = (lz4_compress) ? (width << blockLinesFactor) * 3 : 0;
+	if (!g_gs_device->DownloadTexture(texture, rect, map))
+	{
+		Console.Error("MiSTer: DownloadTexture failed");
+		return;
+	}
 
-   if (blockSize > MAX_LZ4_BLOCK)
-     blockSize = MAX_LZ4_BLOCK;
+	// Get texture properties
+	int tex_width = texture->GetWidth();
+	int tex_height = texture->GetHeight();
+	GSTexture::Format format = texture->GetFormat();
 
-   if (vsync != 0)
-   {
-   	vsync_auto = vsync;
-   }
+	// Calculate output dimensions from draw_rect
+	int out_width = (int)(draw_rect.z - draw_rect.x);
+	int out_height = (int)(draw_rect.w - draw_rect.y);
 
-   buffer[0] = CMD_BLIT_VSYNC;
-   memcpy(&buffer[1], &frame, sizeof(frame));
-   memcpy(&buffer[5], &vsync_auto, sizeof(vsync_auto));
-   buffer[7] = (uint16_t) blockSize & 0xff;
-   buffer[8] = (uint16_t) blockSize >> 8;
+	// Convert texture to RGB format for MiSTer
+	std::vector<char> rgb_buffer;
+	int final_width = 640;  // MiSTer standard resolution
+	int final_height = 480;
 
-   Send(&buffer[0], 9);
+	if (format == GSTexture::Format::Color)
+	{
+		// RGBA8 -> RGB conversion
+		rgb_buffer.resize(final_width * final_height * 3);
 
-   uint32_t bufferSize = (interlaced == 0) ? width * height * 3 : width * (height >> 1) * 3;
+		for (int y = 0; y < std::min(tex_height, final_height); y++)
+		{
+			for (int x = 0; x < std::min(tex_width, final_width); x++)
+			{
+				const u8* src_pixel = map.bits + (y * map.pitch) + (x * 4); // RGBA = 4 bytes
+				char* dst_pixel = rgb_buffer.data() + ((y * final_width) + x) * 3;
 
-   if (lz4_compress == false)
-    SendMTU(&bufferFrame[0], bufferSize, 1470);
-   else
-    SendLZ4(&bufferFrame[0], bufferSize, blockSize);
+				dst_pixel[0] = src_pixel[0]; // R
+				dst_pixel[1] = src_pixel[1]; // G
+				dst_pixel[2] = src_pixel[2]; // B
+			}
+		}
+	}
+	else
+	{
+		Console.Error("MiSTer: Unsupported texture format %d", (int)format);
+		g_gs_device->DownloadTextureComplete();
+		return;
+	}
+
+	// Send frame header - always use LZ4 compression for 480p
+	char header[9];
+	frame++;
+
+	uint16_t vsync_setting = EmuConfig.GS.MisterHardcodedVSync ? EmuConfig.GS.MisterVSync : 0;
+
+	uint8_t blockLinesFactor = (final_width > 384) ? 5 : 4;
+	uint32_t blockSize = (final_width << blockLinesFactor) * 3;
+	if (blockSize > MAX_LZ4_BLOCK)
+		blockSize = MAX_LZ4_BLOCK;
+
+	header[0] = CMD_BLIT_VSYNC;
+	memcpy(&header[1], &frame, sizeof(frame));
+	memcpy(&header[5], &vsync_setting, sizeof(vsync_setting));
+	header[7] = (uint16_t) blockSize & 0xff;
+	header[8] = (uint16_t) blockSize >> 8;
+
+	Send(&header[0], 9);
+
+	// Send RGB data with LZ4 compression
+	uint32_t bufferSize = final_width * final_height * 3;
+	SendLZ4(rgb_buffer.data(), bufferSize, blockSize);
+
+	g_gs_device->DownloadTextureComplete();
 }
 
 void MiSTer::SetStartEmulate(void)

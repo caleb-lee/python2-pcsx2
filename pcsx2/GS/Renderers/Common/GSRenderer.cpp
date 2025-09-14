@@ -18,6 +18,7 @@
 #include "GS/GSGL.h"
 #include "Host.h"
 #include "HostDisplay.h"
+#include "Mister/Mister.h"
 #include "PerformanceMetrics.h"
 #include "pcsx2/Config.h"
 #include "IconsFontAwesome5.h"
@@ -928,8 +929,14 @@ void GSRenderer::PresentCurrentFrame()
 			const u64 current_time = Common::Timer::GetCurrentValue();
 			const float shader_time = static_cast<float>(Common::Timer::ConvertValueToSeconds(current_time - m_shader_time_start));
 
-			g_gs_device->PresentRect(current, src_uv, nullptr, draw_rect,
+			if (EmuConfig.GS.MisterEnable)
+			{
+				g_mister.CmdBlitTexture(current, src_uv, draw_rect);
+			}
+			else {
+				g_gs_device->PresentRect(current, src_uv, nullptr, draw_rect,
 				s_tv_shader_indices[GSConfig.TVShader], shader_time, GSConfig.LinearPresent != GSPostBilinearMode::Off);
+			}
 		}
 
 		Host::EndPresentFrame();

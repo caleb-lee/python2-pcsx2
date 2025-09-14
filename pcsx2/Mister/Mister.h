@@ -61,11 +61,11 @@ public:
   ~MiSTer();
 
   void CmdClose(void);
-  void CmdInit(const char* mister_host, short mister_port, bool lz4_frames, uint32_t sound_rate, uint8_t sound_chan);
+  void CmdInit(void);
   void CmdSwitchres240p();
   void CmdSwitchres480i();
   void CmdSwitchres480p();
-  void CmdBlit(char *bufferFrame, uint16_t vsync);
+  void CmdBlitTexture(class GSTexture* texture, const class GSVector4& src_uv, const class GSVector4& draw_rect);
 
   void SetStartEmulate(void);
   void SetEndEmulate(void);

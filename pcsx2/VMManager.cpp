@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 
 #include "VMManager.h"
+#include "Mister/Mister.h"
 
 #include <atomic>
 #include <sstream>
@@ -1011,6 +1012,15 @@ bool VMManager::Initialize(VMBootParameters boot_params)
 		if (!s_gs_open_on_initialize)
 			GetMTGS().WaitForClose();
 	};
+
+	// Initialize MiSTer connection if enabled
+	if (EmuConfig.GS.MisterEnable)
+	{
+		Console.WriteLn("MiSTer: Initializing connection to %s", EmuConfig.GS.MisterIP.c_str());
+		g_mister.CmdInit();
+		g_mister.CmdSwitchres480p();
+		g_mister.SetStartEmulate();
+	}
 
 	Console.WriteLn("Opening SPU2...");
 	if (!SPU2open())
