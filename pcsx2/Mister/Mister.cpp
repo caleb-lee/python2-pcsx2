@@ -65,120 +65,43 @@ void MiSTer::CmdInit(void)
    m_worker_thread = std::thread(&MiSTer::WorkerThreadFunc, this);
 }
 
-void MiSTer::CmdSwitchres240p()
+void MiSTer::CmdSwitchresDynamic(int width, int height)
 {
     char buffer[26];
 
-    double px = 12.123704;
-    uint16_t udp_hactive = 640;
-    uint16_t udp_hbegin = 658;
-    uint16_t udp_hend = 715;
-    uint16_t udp_htotal = 775;
-    uint16_t udp_vactive = 240;
-    uint16_t udp_vbegin = 243;
-    uint16_t udp_vend = 246;
-    uint16_t udp_vtotal = 262;
-    uint8_t  udp_interlace = 0;
+    // Calculate basic timings for any resolution
+    // Use 60Hz refresh rate and standard blanking ratios
+    double refresh_rate = 59.94; // PS2 refresh rate
+    uint16_t udp_hactive = width;
+    uint16_t udp_vactive = height;
 
-    width = udp_hactive;
-    height = udp_vactive;
+    // Standard blanking - roughly 25% horizontal, 8% vertical
+    uint16_t hblank = width / 4;
+    uint16_t vblank = height / 12;
+
+    uint16_t udp_htotal = udp_hactive + hblank;
+    uint16_t udp_vtotal = udp_vactive + vblank;
+
+    // Calculate pixel clock
+    double px = (double)(udp_htotal * udp_vtotal) * refresh_rate / 1000000.0;
+
+    // Standard sync timing within blanking
+    uint16_t udp_hbegin = udp_hactive + (hblank / 8);
+    uint16_t udp_hend = udp_hbegin + (hblank / 4);
+    uint16_t udp_vbegin = udp_vactive + (vblank / 4);
+    uint16_t udp_vend = udp_vbegin + (vblank / 2);
+
+    uint8_t udp_interlace = 0; // Progressive
+
+    // Update internal state
+    this->width = udp_hactive;
+    this->height = udp_vactive;
     lines = udp_vtotal;
     interlaced = udp_interlace;
-
     widthTime = round((double) udp_htotal * (1 / px));
     frameTime = widthTime * udp_vtotal;
 
-    if (interlaced)
-    {
-        frameField = 0;
-        frameTime = frameTime >> 1;
-    }
-
-    buffer[0] = CMD_SWITCHRES;
-    memcpy(&buffer[1],&px,sizeof(px));
-    memcpy(&buffer[9],&udp_hactive,sizeof(udp_hactive));
-    memcpy(&buffer[11],&udp_hbegin,sizeof(udp_hbegin));
-    memcpy(&buffer[13],&udp_hend,sizeof(udp_hend));
-    memcpy(&buffer[15],&udp_htotal,sizeof(udp_htotal));
-    memcpy(&buffer[17],&udp_vactive,sizeof(udp_vactive));
-    memcpy(&buffer[19],&udp_vbegin,sizeof(udp_vbegin));
-    memcpy(&buffer[21],&udp_vend,sizeof(udp_vend));
-    memcpy(&buffer[23],&udp_vtotal,sizeof(udp_vtotal));
-    memcpy(&buffer[25],&udp_interlace,sizeof(udp_interlace));
-    Send(&buffer[0], 26);
-}
-
-void MiSTer::CmdSwitchres480i()
-{
-    char buffer[26];
-
-    double px = 12.146841;
-    uint16_t udp_hactive = 640;
-    uint16_t udp_hbegin = 658;
-    uint16_t udp_hend = 715;
-    uint16_t udp_htotal = 772;
-    uint16_t udp_vactive = 480;
-    uint16_t udp_vbegin = 487;
-    uint16_t udp_vend = 493;
-    uint16_t udp_vtotal = 525;
-    uint8_t  udp_interlace = 1;
-
-    width = udp_hactive;
-    height = udp_vactive;
-    lines = udp_vtotal;
-    interlaced = udp_interlace;
-
-    widthTime = round((double) udp_htotal * (1 / px));
-    frameTime = widthTime * udp_vtotal;
-
-    if (interlaced)
-    {
-        frameField = 0;
-        frameTime = frameTime >> 1;
-    }
-
-    buffer[0] = CMD_SWITCHRES;
-    memcpy(&buffer[1],&px,sizeof(px));
-    memcpy(&buffer[9],&udp_hactive,sizeof(udp_hactive));
-    memcpy(&buffer[11],&udp_hbegin,sizeof(udp_hbegin));
-    memcpy(&buffer[13],&udp_hend,sizeof(udp_hend));
-    memcpy(&buffer[15],&udp_htotal,sizeof(udp_htotal));
-    memcpy(&buffer[17],&udp_vactive,sizeof(udp_vactive));
-    memcpy(&buffer[19],&udp_vbegin,sizeof(udp_vbegin));
-    memcpy(&buffer[21],&udp_vend,sizeof(udp_vend));
-    memcpy(&buffer[23],&udp_vtotal,sizeof(udp_vtotal));
-    memcpy(&buffer[25],&udp_interlace,sizeof(udp_interlace));
-    Send(&buffer[0], 26);
-}
-
-void MiSTer::CmdSwitchres480p()
-{
-    char buffer[26];
-
-    double px = 25.175;
-    uint16_t udp_hactive = 640;
-    uint16_t udp_hbegin = 656;
-    uint16_t udp_hend = 752;
-    uint16_t udp_htotal = 800;
-    uint16_t udp_vactive = 480;
-    uint16_t udp_vbegin = 490;
-    uint16_t udp_vend = 492;
-    uint16_t udp_vtotal = 525;
-    uint8_t  udp_interlace = 0;
-
-    width = udp_hactive;
-    height = udp_vactive;
-    lines = udp_vtotal;
-    interlaced = udp_interlace;
-
-    widthTime = round((double) udp_htotal * (1 / px));
-    frameTime = widthTime * udp_vtotal;
-
-    if (interlaced)
-    {
-        frameField = 0;
-        frameTime = frameTime >> 1;
-    }
+    Console.WriteLn("MiSTer: Switching to %dx%d @ %.2fMHz", width, height, px);
 
     buffer[0] = CMD_SWITCHRES;
     memcpy(&buffer[1],&px,sizeof(px));
@@ -354,6 +277,16 @@ void MiSTer::WorkerThreadFunc()
 
 		// Increment frame counter on worker thread
 		frame++;
+
+		// Check for resolution change and send switchres if needed
+		if (frame_data.width != m_current_width || frame_data.height != m_current_height)
+		{
+			Console.WriteLn("MiSTer: Resolution changed from %dx%d to %dx%d",
+				m_current_width, m_current_height, frame_data.width, frame_data.height);
+			CmdSwitchresDynamic(frame_data.width, frame_data.height);
+			m_current_width = frame_data.width;
+			m_current_height = frame_data.height;
+		}
 
 		// All MiSTer timing and transmission in background thread
 		SetEndEmulate();

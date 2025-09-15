@@ -65,9 +65,7 @@ public:
 
   void CmdClose(void);
   void CmdInit(void);
-  void CmdSwitchres240p();
-  void CmdSwitchres480i();
-  void CmdSwitchres480p();
+  void CmdSwitchresDynamic(int width, int height);
   void CmdBlitFrameBuffer(const u8* framebuffer, int width, int height, int pitch);
 
   void SetStartEmulate(void);
@@ -89,6 +87,10 @@ private:
   std::string m_mister_ip;
   bool m_hardcoded_vsync;
   uint16_t m_vsync_value;
+
+  // Current resolution tracking
+  int m_current_width = 0;
+  int m_current_height = 0;
 
   // Background frame transmission
   struct FrameData {
