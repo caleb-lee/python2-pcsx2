@@ -7,6 +7,9 @@
 #include <cstring>
 #include <array>
 #include <mutex>
+#include <thread>
+#include <queue>
+#include <condition_variable>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -36,7 +39,7 @@
 
 #define MAX_BUFFER_WIDTH 1024
 #define MAX_BUFFER_HEIGHT 768
-#define MAX_LZ4_BLOCK   61440
+#define MAX_LZ4_BLOCK   (LZ4_COMPRESSBOUND(MAX_BUFFER_WIDTH * MAX_BUFFER_HEIGHT * 3))
 
 typedef union
 {
@@ -65,7 +68,7 @@ public:
   void CmdSwitchres240p();
   void CmdSwitchres480i();
   void CmdSwitchres480p();
-  void CmdBlitTexture(class GSTexture* texture, const class GSVector4& src_uv, const class GSVector4& draw_rect);
+  void CmdBlitFrameBuffer(const u8* framebuffer, int width, int height, int pitch);
 
   void SetStartEmulate(void);
   void SetEndEmulate(void);
@@ -81,6 +84,26 @@ public:
 
 private:
   bool lz4_compress = false;
+
+  // Config values copied at init to avoid accessing EmuConfig from worker thread
+  std::string m_mister_ip;
+  bool m_hardcoded_vsync;
+  uint16_t m_vsync_value;
+
+  // Background frame transmission
+  struct FrameData {
+    std::vector<char> rgb_data;
+    int width;
+    int height;
+  };
+
+  std::queue<FrameData> m_frame_queue;
+  std::mutex m_queue_mutex;
+  std::condition_variable m_queue_cv;
+  std::thread m_worker_thread;
+  std::atomic<bool> m_shutdown{false};
+
+  void WorkerThreadFunc();
   uint32_t frame = 0;
   uint8_t  frameField = 0;
   uint16_t width = 0;
@@ -102,11 +125,13 @@ private:
   uint16_t vcountGPU = 0;
 
   uint8_t fpga_debug_bits = 0;
+  uint8_t fpga_vram_ready = 0;
   uint8_t fpga_vram_end_frame = 0;
   uint8_t fpga_vram_synced = 0;
   uint8_t fpga_vga_frameskip = 0;
   uint8_t fpga_vga_vblank = 0;
   uint8_t fpga_vga_f1 = 0;
+  uint8_t fpga_audio = 0;
   uint8_t fpga_vram_queue = 0;
 
 #ifdef _WIN32
@@ -124,13 +149,14 @@ private:
   struct sockaddr_in ServerAddr;
   char bufferRecv[256];
 
-  char inp_buf[2][MAX_LZ4_BLOCK];
+  char inp_buf[2][MAX_LZ4_BLOCK + 1];
   char m_fb_compressed[MAX_LZ4_BLOCK + 2];
 
   void Send(void *cmd, int cmdSize);
   void SendMTU(char *buffer, int bytes_to_send, int chunk_max_size);
   void SendLZ4(char *buffer, int bytes_to_send, int block_size);
   void ReceiveBlitACK(void);
+  bool WaitForACK(double timeout_ms);
 
 #ifndef _WIN32
   uint32_t DiffTimespec(timespec start, timespec end);

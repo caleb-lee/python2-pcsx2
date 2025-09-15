@@ -929,14 +929,8 @@ void GSRenderer::PresentCurrentFrame()
 			const u64 current_time = Common::Timer::GetCurrentValue();
 			const float shader_time = static_cast<float>(Common::Timer::ConvertValueToSeconds(current_time - m_shader_time_start));
 
-			if (EmuConfig.GS.MisterEnable)
-			{
-				g_mister.CmdBlitTexture(current, src_uv, draw_rect);
-			}
-			else {
-				g_gs_device->PresentRect(current, src_uv, nullptr, draw_rect,
+			g_gs_device->PresentRect(current, src_uv, nullptr, draw_rect,
 				s_tv_shader_indices[GSConfig.TVShader], shader_time, GSConfig.LinearPresent != GSPostBilinearMode::Off);
-			}
 		}
 
 		Host::EndPresentFrame();

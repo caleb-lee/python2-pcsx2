@@ -3,6 +3,8 @@
 #include "Host.h"
 #include "Config.h"
 #include "GS/Renderers/Common/GSDevice.h"
+#include <chrono>
+#include <thread>
 
 MiSTer::MiSTer()
 {
@@ -10,6 +12,15 @@ MiSTer::MiSTer()
 
 MiSTer::~MiSTer()
 {
+	// Shutdown background worker thread safely
+	{
+		std::lock_guard<std::mutex> lock(m_queue_mutex);
+		m_shutdown = true;
+	}
+	m_queue_cv.notify_all();
+
+	if (m_worker_thread.joinable())
+		m_worker_thread.join();
 }
 
 void MiSTer::CmdClose(void)
@@ -27,102 +38,12 @@ void MiSTer::CmdClose(void)
 
 void MiSTer::CmdInit(void)
 {
-	char buffer[4];
+   // Copy config values to avoid EmuConfig access from worker thread
+   m_mister_ip = EmuConfig.GS.MisterIP;
+   m_hardcoded_vsync = EmuConfig.GS.MisterHardcodedVSync;
+   m_vsync_value = EmuConfig.GS.MisterVSync;
 
-#ifdef _WIN32
-	WSADATA wsd;
-	int rc;
-
-	Console.WriteLn("MiSTer: Initialising Winsock...");
-	rc = WSAStartup(MAKEWORD(2, 2), &wsd);
-	if (rc != 0)
-	{
-		Console.Error("MiSTer: Unable to load Winsock: %d", rc);
-		return;
-	}
-
-	Console.WriteLn("MiSTer: Initialising socket...");
-	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (sockfd == INVALID_SOCKET)
-	{
-		Console.Error("MiSTer: socket error: %d", WSAGetLastError());
-		return;
-	}
-
-	memset(&ServerAddr, 0, sizeof(ServerAddr));
-	ServerAddr.sin_family = AF_INET;
-	ServerAddr.sin_port = htons(32100);
-	ServerAddr.sin_addr.s_addr = inet_addr(EmuConfig.GS.MisterIP.c_str());
-
-	Console.WriteLn("MiSTer: Setting socket async...");
-	u_long iMode = 1;
-	rc = ioctlsocket(sockfd, FIONBIO, &iMode);
-	if (rc == SOCKET_ERROR)
-	{
-		Console.Error("MiSTer: set nonblock fail: %d", WSAGetLastError());
-		return;
-	}
-
-	Console.WriteLn("MiSTer: Setting send buffer to 2097152 bytes...");
-	int optVal = 2097152;
-	int optLen = sizeof(int);
-	rc = setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen);
-	if (rc == SOCKET_ERROR)
-	{
-		Console.Error("MiSTer: set so_sndbuff fail: %d", WSAGetLastError());
-		return;
-	}
-
-#else
-
-	Console.WriteLn("MiSTer: Initialising socket...");
-	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (sockfd < 0)
-	{
-		Console.Error("MiSTer: socket error");
-		return;
-	}
-
-	memset(&ServerAddr, 0, sizeof(ServerAddr));
-	ServerAddr.sin_family = AF_INET;
-	ServerAddr.sin_port = htons(32100);
-	ServerAddr.sin_addr.s_addr = inet_addr(EmuConfig.GS.MisterIP.c_str());
-
-	Console.WriteLn("MiSTer: Setting socket async...");
-	int flags;
-	flags = fcntl(sockfd, F_GETFL, 0);
-	if (flags < 0)
-	{
-		Console.Error("MiSTer: get flag error");
-		return;
-	}
-	flags |= O_NONBLOCK;
-	if (fcntl(sockfd, F_SETFL, flags) < 0)
-	{
-		Console.Error("MiSTer: set nonblock fail");
-		return;
-	}
-
-	Console.WriteLn("MiSTer: Setting send buffer to 2097152 bytes...");
-	int size = 2 * 1024 * 1024;
-	if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (void*)&size, sizeof(size)) < 0)
-	{
-		Console.Error("MiSTer: Error so_sndbuff");
-		return;
-	}
-
-#endif
-
-   Console.WriteLn("MiSTer: Sending CMD_INIT...");
-
-   buffer[0] = CMD_INIT;
-   buffer[1] = (lz4_frames) ? 1 : 0;
-   buffer[2] = (sound_rate == 22050) ? 1 : (sound_rate == 44100) ? 2 : (sound_rate == 48000) ? 3 : 0;
-   buffer[3] = sound_chan;
-
-   Send(&buffer[0], 4);
-
-   lz4_compress = lz4_frames;
+   lz4_compress = true;
    width = 0;
    height = 0;
    lines = 0;
@@ -138,6 +59,10 @@ void MiSTer::CmdInit(void)
    frameGPU = 0;
    vcountGPU = 0;
    interlaced = 0;
+
+   // Start background worker thread - it will handle all socket init
+   m_shutdown = false;
+   m_worker_thread = std::thread(&MiSTer::WorkerThreadFunc, this);
 }
 
 void MiSTer::CmdSwitchres240p()
@@ -269,84 +194,201 @@ void MiSTer::CmdSwitchres480p()
     Send(&buffer[0], 26);
 }
 
-void MiSTer::CmdBlitTexture(class GSTexture* texture, const class GSVector4& src_uv, const class GSVector4& draw_rect)
+void MiSTer::CmdBlitFrameBuffer(const u8* framebuffer, int width, int height, int pitch)
 {
-	if (!texture || !g_gs_device)
+	if (!framebuffer)
 		return;
 
-	// Download texture data from GPU
-	GSTexture::GSMap map;
-	GSVector4i rect(0, 0, texture->GetWidth(), texture->GetHeight());
-
-	if (!g_gs_device->DownloadTexture(texture, rect, map))
-	{
-		Console.Error("MiSTer: DownloadTexture failed");
-		return;
-	}
-
-	// Get texture properties
-	int tex_width = texture->GetWidth();
-	int tex_height = texture->GetHeight();
-	GSTexture::Format format = texture->GetFormat();
-
-	// Calculate output dimensions from draw_rect
-	int out_width = (int)(draw_rect.z - draw_rect.x);
-	int out_height = (int)(draw_rect.w - draw_rect.y);
-
-	// Convert texture to RGB format for MiSTer
+	// Convert RGBA framebuffer to RGB format for MiSTer
 	std::vector<char> rgb_buffer;
-	int final_width = 640;  // MiSTer standard resolution
-	int final_height = 480;
 
-	if (format == GSTexture::Format::Color)
+	// Use actual PS2 output resolution
+	int final_width = width;
+	int final_height = height;
+
+	rgb_buffer.resize(final_width * final_height * 3);
+
+	// Convert RGBA to RGB
+	for (int y = 0; y < final_height; y++)
 	{
-		// RGBA8 -> RGB conversion
-		rgb_buffer.resize(final_width * final_height * 3);
-
-		for (int y = 0; y < std::min(tex_height, final_height); y++)
+		for (int x = 0; x < final_width; x++)
 		{
-			for (int x = 0; x < std::min(tex_width, final_width); x++)
-			{
-				const u8* src_pixel = map.bits + (y * map.pitch) + (x * 4); // RGBA = 4 bytes
-				char* dst_pixel = rgb_buffer.data() + ((y * final_width) + x) * 3;
+			// Source pixel (RGBA, 4 bytes per pixel)
+			const u8* src_pixel = framebuffer + (y * pitch) + (x * 4);
 
-				dst_pixel[0] = src_pixel[0]; // R
-				dst_pixel[1] = src_pixel[1]; // G
-				dst_pixel[2] = src_pixel[2]; // B
-			}
+			// Destination pixel (RGB, 3 bytes per pixel)
+			int dst_index = (y * final_width + x) * 3;
+
+			rgb_buffer[dst_index + 0] = src_pixel[0]; // R
+			rgb_buffer[dst_index + 1] = src_pixel[1]; // G
+			rgb_buffer[dst_index + 2] = src_pixel[2]; // B
+			// Skip alpha channel (src_pixel[3])
 		}
 	}
-	else
+
+	// Queue frame for background transmission - return immediately from hot path
 	{
-		Console.Error("MiSTer: Unsupported texture format %d", (int)format);
-		g_gs_device->DownloadTextureComplete();
+		std::lock_guard<std::mutex> lock(m_queue_mutex);
+		m_frame_queue.push({std::move(rgb_buffer), final_width, final_height});
+	}
+	m_queue_cv.notify_one();
+}
+
+void MiSTer::WorkerThreadFunc()
+{
+	// Initialize socket on worker thread
+	char buffer[4];
+
+#ifdef _WIN32
+	WSADATA wsd;
+	int rc;
+
+	Console.WriteLn("MiSTer: Initialising Winsock...");
+	rc = WSAStartup(MAKEWORD(2, 2), &wsd);
+	if (rc != 0)
+	{
+		Console.Error("MiSTer: Unable to load Winsock: %d", rc);
 		return;
 	}
 
-	// Send frame header - always use LZ4 compression for 480p
-	char header[9];
-	frame++;
+	Console.WriteLn("MiSTer: Initialising socket...");
+	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sockfd == INVALID_SOCKET)
+	{
+		Console.Error("MiSTer: socket error: %d", WSAGetLastError());
+		return;
+	}
 
-	uint16_t vsync_setting = EmuConfig.GS.MisterHardcodedVSync ? EmuConfig.GS.MisterVSync : 0;
+	memset(&ServerAddr, 0, sizeof(ServerAddr));
+	ServerAddr.sin_family = AF_INET;
+	ServerAddr.sin_port = htons(32100);
+	ServerAddr.sin_addr.s_addr = inet_addr(m_mister_ip.c_str());
 
-	uint8_t blockLinesFactor = (final_width > 384) ? 5 : 4;
-	uint32_t blockSize = (final_width << blockLinesFactor) * 3;
-	if (blockSize > MAX_LZ4_BLOCK)
-		blockSize = MAX_LZ4_BLOCK;
+	Console.WriteLn("MiSTer: Setting socket async...");
+	u_long iMode = 1;
+	rc = ioctlsocket(sockfd, FIONBIO, &iMode);
+	if (rc == SOCKET_ERROR)
+	{
+		Console.Error("MiSTer: set nonblock fail: %d", WSAGetLastError());
+		return;
+	}
 
-	header[0] = CMD_BLIT_VSYNC;
-	memcpy(&header[1], &frame, sizeof(frame));
-	memcpy(&header[5], &vsync_setting, sizeof(vsync_setting));
-	header[7] = (uint16_t) blockSize & 0xff;
-	header[8] = (uint16_t) blockSize >> 8;
+	Console.WriteLn("MiSTer: Setting send buffer to 2097152 bytes...");
+	int optVal = 2097152;
+	int optLen = sizeof(int);
+	rc = setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char*)&optVal, optLen);
+	if (rc == SOCKET_ERROR)
+	{
+		Console.Error("MiSTer: set so_sndbuff fail: %d", WSAGetLastError());
+		return;
+	}
 
-	Send(&header[0], 9);
+#else
 
-	// Send RGB data with LZ4 compression
-	uint32_t bufferSize = final_width * final_height * 3;
-	SendLZ4(rgb_buffer.data(), bufferSize, blockSize);
+	Console.WriteLn("MiSTer: Initialising socket...");
+	sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sockfd < 0)
+	{
+		Console.Error("MiSTer: socket error");
+		return;
+	}
 
-	g_gs_device->DownloadTextureComplete();
+	memset(&ServerAddr, 0, sizeof(ServerAddr));
+	ServerAddr.sin_family = AF_INET;
+	ServerAddr.sin_port = htons(32100);
+	ServerAddr.sin_addr.s_addr = inet_addr(m_mister_ip.c_str());
+
+	Console.WriteLn("MiSTer: Setting socket async...");
+	int flags;
+	flags = fcntl(sockfd, F_GETFL, 0);
+	if (flags < 0)
+	{
+		Console.Error("MiSTer: get flag error");
+		return;
+	}
+	flags |= O_NONBLOCK;
+	if (fcntl(sockfd, F_SETFL, flags) < 0)
+	{
+		Console.Error("MiSTer: set nonblock fail");
+		return;
+	}
+
+	Console.WriteLn("MiSTer: Setting send buffer to 2097152 bytes...");
+	int size = 2 * 1024 * 1024;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (void*)&size, sizeof(size)) < 0)
+	{
+		Console.Error("MiSTer: Error so_sndbuff");
+		return;
+	}
+
+#endif
+
+   Console.WriteLn("MiSTer: Sending CMD_INIT...");
+
+   buffer[0] = CMD_INIT;
+   buffer[1] = 1; // Always enable LZ4 frames for 480p
+   buffer[2] = 0; // No audio for now
+   buffer[3] = 0; // No audio channels for now
+
+   Send(&buffer[0], 4);
+
+	while (!m_shutdown)
+	{
+		std::unique_lock<std::mutex> lock(m_queue_mutex);
+		m_queue_cv.wait(lock, [this] { return !m_frame_queue.empty() || m_shutdown; });
+
+		if (m_shutdown)
+			break;
+
+		if (m_frame_queue.empty())
+			continue;
+
+		// Only process the most recent frame, discard older ones
+		FrameData frame_data;
+		while (!m_frame_queue.empty())
+		{
+			frame_data = std::move(m_frame_queue.front());
+			m_frame_queue.pop();
+		}
+		lock.unlock();
+
+		// Increment frame counter on worker thread
+		frame++;
+
+		// All MiSTer timing and transmission in background thread
+		SetEndEmulate();
+		SetStartBlit();
+
+		uint16_t vsync_setting = m_hardcoded_vsync ? m_vsync_value : 0;
+
+		uint8_t blockLinesFactor = (frame_data.width > 384) ? 5 : 4;
+		uint32_t blockSize = (frame_data.width << blockLinesFactor) * 3;
+		if (blockSize > MAX_LZ4_BLOCK)
+			blockSize = MAX_LZ4_BLOCK;
+
+		uint32_t bufferSize = frame_data.width * frame_data.height * 3;
+		uint32_t compressed_data_size = LZ4_compress_default(frame_data.rgb_data.data(), m_fb_compressed, bufferSize, LZ4_COMPRESSBOUND(MAX_BUFFER_HEIGHT * MAX_BUFFER_WIDTH * 3));
+
+		// Create GroovyMAME-compatible blit command structure
+		struct {
+			const uint8_t cmd = CMD_BLIT_VSYNC;
+			uint32_t frame;
+			uint16_t vsync;
+			uint32_t compressed_data_size;
+		} blit_command;
+
+		blit_command.frame = frame;
+		blit_command.vsync = vsync_setting;
+		blit_command.compressed_data_size = compressed_data_size;
+
+		Send(&blit_command, sizeof(blit_command));
+		SendMTU(m_fb_compressed, compressed_data_size, 1472);
+
+		// Synchronize with MiSTer like Dolphin does
+		SetEndBlit();
+		Sync();
+		SetStartEmulate();
+	}
 }
 
 void MiSTer::SetStartEmulate(void)
@@ -565,26 +607,49 @@ void MiSTer::ReceiveBlitACK(void)
    	len = recvfrom(sockfd, bufferRecv, sizeof(bufferRecv), 0, (struct sockaddr *)&ServerAddr, &sServerAddr);
    	if (len >= 13)
    	{
-   		memcpy(&frameUDP, &bufferRecv[0],4);
+   		memcpy(&frameUDP, &bufferRecv[0], 4);
    		if (frameUDP > frameEcho)
    		{
    			frameEcho = frameUDP;
-   			memcpy(&vcountEcho, &bufferRecv[4],2);
-			memcpy(&frameGPU, &bufferRecv[6],4);
-			memcpy(&vcountGPU, &bufferRecv[10],2);
-			memcpy(&fpga_debug_bits, &bufferRecv[12],1);
+   			memcpy(&vcountEcho, &bufferRecv[4], 2);
+   			memcpy(&frameGPU, &bufferRecv[6], 4);
+   			memcpy(&vcountGPU, &bufferRecv[10], 2);
+   			memcpy(&fpga_debug_bits, &bufferRecv[12], 1);
 
-			bitByte bits;
-			bits.byte = fpga_debug_bits;
-			fpga_vram_end_frame = bits.u.bit1;
-			fpga_vram_synced    = bits.u.bit2;
-			fpga_vga_frameskip  = bits.u.bit3;
-			fpga_vga_vblank     = bits.u.bit4;
-			fpga_vga_f1         = bits.u.bit5;
- 			fpga_vram_queue     = bits.u.bit7;
+   			bitByte bits;
+   			bits.byte = fpga_debug_bits;
+   			fpga_vram_ready     = bits.u.bit0;
+   			fpga_vram_end_frame = bits.u.bit1;
+   			fpga_vram_synced    = bits.u.bit2;
+   			fpga_vga_frameskip  = bits.u.bit3;
+   			fpga_vga_vblank     = bits.u.bit4;
+   			fpga_vga_f1         = bits.u.bit5;
+   			fpga_audio          = bits.u.bit6;
+   			fpga_vram_queue     = bits.u.bit7;
    		}
    	}
    } while (len > 0 && frame != frameEcho);
+}
+
+bool MiSTer::WaitForACK(double timeout_ms)
+{
+	const auto start_time = std::chrono::steady_clock::now();
+
+	while (frame != frameEcho)
+	{
+		ReceiveBlitACK();
+
+		auto elapsed = std::chrono::steady_clock::now() - start_time;
+		if (std::chrono::duration<double, std::milli>(elapsed).count() > timeout_ms)
+		{
+			Console.Warning("MiSTer: ACK timeout after %.1fms", timeout_ms);
+			return false;
+		}
+
+		std::this_thread::sleep_for(std::chrono::microseconds(100));
+	}
+
+	return true;
 }
 
 #ifndef _WIN32

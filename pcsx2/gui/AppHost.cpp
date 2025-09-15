@@ -24,7 +24,6 @@
 #include "HostSettings.h"
 #include "HostDisplay.h"
 #include "GS/GS.h"
-#include "Mister/Mister.h"
 
 #include "common/Assertions.h"
 #include "Frontend/ImGuiManager.h"
@@ -171,36 +170,6 @@ bool Host::BeginPresentFrame(bool frame_skip)
 void Host::EndPresentFrame()
 {
 	ImGuiManager::RenderOSD();
-
-	// MiSTer output hook - NO LOGGING IN HOT PATH
-	if (EmuConfig.GS.MisterEnable)
-	{
-		static bool mister_initialized = false;
-		static std::vector<char> blue_frame;
-
-		if (!mister_initialized)
-		{
-			Console.WriteLn("MiSTer: Initializing connection to %s", EmuConfig.GS.MisterIP.c_str());
-			g_mister.CmdInit(EmuConfig.GS.MisterIP.c_str(), 32100, true, 48000, 2);
-			g_mister.CmdSwitchres480p();
-
-			// Create solid blue frame (640x480 RGB)
-			blue_frame.resize(640 * 480 * 3);
-			for (int i = 0; i < 640 * 480; i++)
-			{
-				blue_frame[i * 3 + 0] = 0;   // R
-				blue_frame[i * 3 + 1] = 0;   // G
-				blue_frame[i * 3 + 2] = 255; // B
-			}
-
-			mister_initialized = true;
-			g_mister.SetStartEmulate();
-		}
-
-		// Send blue frame every frame - no logging
-		g_mister.CmdBlit(blue_frame.data(), EmuConfig.GS.MisterVSync);
-	}
-
 	g_host_display->EndPresent();
 	ImGuiManager::NewFrame();
 }

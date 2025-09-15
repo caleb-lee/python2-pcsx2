@@ -17,6 +17,7 @@
 #include "GSRendererSW.h"
 #include "GS/GSGL.h"
 #include "common/StringUtil.h"
+#include "Mister/Mister.h"
 
 MULTI_ISA_UNSHARED_IMPL;
 
@@ -200,6 +201,14 @@ GSTexture* GSRendererSW::GetOutput(int i, int& y_offset)
 		}
 
 		m_texture[i]->Update(out_r, m_output, pitch);
+
+		// Send frame to MiSTer if enabled
+		if (EmuConfig.GS.MisterEnable)
+		{
+			// Send the raw frame data to MiSTer - m_output contains RGBA data
+			// out_r contains the dimensions (width = out_r.z, height = out_r.w)
+			g_mister.CmdBlitFrameBuffer(m_output, out_r.z, out_r.w, pitch);
+		}
 
 		if (s_dump)
 		{
