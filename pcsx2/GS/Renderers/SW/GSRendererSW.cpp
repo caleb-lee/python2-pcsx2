@@ -207,7 +207,7 @@ GSTexture* GSRendererSW::GetOutput(int i, int& y_offset)
 		{
 			// Send the raw frame data to MiSTer - m_output contains RGBA data
 			// out_r contains the dimensions (width = out_r.z, height = out_r.w)
-			g_mister.CmdBlitFrameBuffer(m_output, out_r.z, out_r.w, pitch);
+			g_mister.CmdBlitFrameBuffer(m_output, out_r.z, out_r.w, pitch, isinterlaced());
 		}
 
 		if (s_dump)

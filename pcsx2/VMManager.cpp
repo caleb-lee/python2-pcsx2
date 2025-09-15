@@ -1018,8 +1018,6 @@ bool VMManager::Initialize(VMBootParameters boot_params)
 	{
 		Console.WriteLn("MiSTer: Initializing connection to %s", EmuConfig.GS.MisterIP.c_str());
 		g_mister.CmdInit();
-		g_mister.CmdSwitchres480p();
-		g_mister.SetStartEmulate();
 	}
 
 	Console.WriteLn("Opening SPU2...");

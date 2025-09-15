@@ -65,8 +65,7 @@ public:
 
   void CmdClose(void);
   void CmdInit(void);
-  void CmdSwitchresDynamic(int width, int height);
-  void CmdBlitFrameBuffer(const u8* framebuffer, int width, int height, int pitch);
+  void CmdBlitFrameBuffer(const u8* framebuffer, int width, int height, int pitch, bool is_interlaced);
 
   void SetStartEmulate(void);
   void SetEndEmulate(void);
@@ -91,12 +90,14 @@ private:
   // Current resolution tracking
   int m_current_width = 0;
   int m_current_height = 0;
+  bool m_current_is_interlaced = false;
 
   // Background frame transmission
   struct FrameData {
     std::vector<char> rgb_data;
     int width;
     int height;
+    bool is_interlaced;
   };
 
   std::queue<FrameData> m_frame_queue;
@@ -105,6 +106,7 @@ private:
   std::thread m_worker_thread;
   std::atomic<bool> m_shutdown{false};
 
+  void CmdSwitchresDynamic(int width, int height, bool is_interlaced);
   void WorkerThreadFunc();
   uint32_t frame = 0;
   uint8_t  frameField = 0;
